@@ -87,7 +87,7 @@ def detect_face(image_np):
     
     # OPTIMIZATION: People usually have heads in the top half of their body.
     # We slice the top 50% to reduce the area Haar Cascade has to scan.
-    scan_h = int(h_full * 0.5)
+    scan_h = int(h_full * 1.0)
     
     # Sanity check: if image is too small, scan whole thing
     if scan_h < 50: 
