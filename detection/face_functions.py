@@ -63,9 +63,15 @@ def load_adaface_model():
 
     return load_model_from_local_path(save_path)
 
-print("Initializing Face Recognition Model...")
-adaface_model = load_adaface_model()
-print("Face Recognition Model Loaded.")
+adaface_model = None
+
+def get_adaface_model():
+    global adaface_model
+    if adaface_model is None:
+        print("Initializing Face Recognition Model...")
+        adaface_model = load_adaface_model()
+        print("Face Recognition Model Loaded.")
+    return adaface_model
 
 transform = transforms.Compose([
     transforms.Resize((112, 112)),
@@ -133,7 +139,7 @@ def extract_face_embedding(face_np):
         face_tensor = transform(face_pil).unsqueeze(0).to(device)
 
         with torch.no_grad():
-            emb = adaface_model(face_tensor)
+            emb = get_adaface_model()(face_tensor)
             emb = F.normalize(emb, p=2, dim=1)
 
         return emb.cpu().numpy().flatten().tolist()
