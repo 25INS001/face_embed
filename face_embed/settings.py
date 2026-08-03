@@ -17,16 +17,24 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "change-me-only-for-local-dev")
+# Supplied via the environment — never hardcoded. See the root .env.example.
+SECRET_KEY = os.environ.get("FACE_EMBED_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "FACE_EMBED_SECRET_KEY is not set. Generate one with:\n"
+        "  python -c \"from django.core.management.utils import "
+        "get_random_secret_key as k; print(k())\""
+    )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() in ("1", "true", "yes", "on")
+DEBUG = os.environ.get("FACE_EMBED_DEBUG", "False").lower() in ("1", "true", "yes")
 
-ALLOWED_HOSTS = [host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host.strip()]
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.environ.get("FACE_EMBED_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if h.strip()
+]
 
 
 # Application definition
