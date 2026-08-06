@@ -40,8 +40,10 @@ jobs:
           pip install -r requirements.txt
       - name: Run Django checks and tests
         env:
-          DJANGO_SECRET_KEY: ci-secret
-          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+          # settings.py reads FACE_EMBED_*, not DJANGO_*. Throwaway CI values:
+          # the key only has to exist for `check` and the test client.
+          FACE_EMBED_SECRET_KEY: ci-secret
+          FACE_EMBED_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
         run: |
           python manage.py check
           python manage.py test --verbosity 2
