@@ -15,7 +15,10 @@ RUN apt-get update && apt-get install -y \
 
 # Install python deps
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# --timeout/--retries because this pulls the torch stack (hundreds of MB) and
+# the arm64 builder is on a slower link: the default 15s socket timeout was
+# enough to fail the build outright with a ReadTimeoutError from PyPI.
+RUN pip install --no-cache-dir --timeout 120 --retries 10 -r requirements.txt
 
 # Copy project
 COPY . .
