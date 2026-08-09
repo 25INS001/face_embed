@@ -175,6 +175,10 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     steps:
+      # 1800s, not the 300s the other services use: this image carries the
+      # torch/CUDA stack and is several GB, and the arm64 nodes are Raspberry
+      # Pis — the first pull of a new tag routinely takes over ten minutes, so
+      # a 5 minute rollout window failed a deploy that was working fine.
       - name: Deploy to Kubernetes
         env:
           SSH_HOST: ${{ secrets.KUBE_SSH_HOST }}
@@ -196,4 +200,4 @@ jobs:
           # mid-wait and the job fails even though the rollout succeeded.
           ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=40 \
             -i ~/.ssh/kube_deploy_key -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
-            "kubectl -n '$NAMESPACE' set image deployment/${DEPLOYMENT_NAME} ${CONTAINER_NAME}='$IMAGE' && kubectl -n '$NAMESPACE' rollout status deployment/${DEPLOYMENT_NAME} --timeout=300s"
+            "kubectl -n '$NAMESPACE' set image deployment/${DEPLOYMENT_NAME} ${CONTAINER_NAME}='$IMAGE' && kubectl -n '$NAMESPACE' rollout status deployment/${DEPLOYMENT_NAME} --timeout=1800s"
