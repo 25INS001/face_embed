@@ -7,3 +7,5 @@ requests>=2.31
 Django>=5.2
 djangorestframework>=3.16
 numpy>=1.26
+# Pillow is real, not stubbed — see tests/stubs.py.
+Pillow>=10.0

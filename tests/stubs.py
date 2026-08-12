@@ -12,10 +12,13 @@ mode maps to a specific status code. Those promises live entirely in views.py.
 So the heavy modules are replaced with the smallest objects that let the import
 succeed. The two functions that actually matter are left importable and are
 monkeypatched per test, which keeps the seam visible: a test that forgets to
-patch them gets a NotImplementedError rather than a silent pass.
+patch one gets an inert stand-in back and fails on its assertion rather than
+passing silently.
 
-numpy and the real request/response path are NOT stubbed — those are cheap and
-are part of what is being tested.
+Three things are deliberately left real, because they are cheap and are part of
+what is being tested: numpy, Pillow, and the request/response path. cv2 is
+stubbed but faithful about the one thing the view branches on — it decodes an
+image and returns None for anything else.
 """
 
 import sys
@@ -88,8 +91,11 @@ def install():
     sys.modules["torchvision"] = _module("torchvision", transforms=_Inert("torchvision.transforms"))
     sys.modules["torchvision.transforms"] = _module("torchvision.transforms")
 
-    sys.modules["PIL"] = _module("PIL", Image=_Inert("PIL.Image"))
-    sys.modules["PIL.Image"] = _module("PIL.Image")
+    # PIL is deliberately NOT stubbed. face_functions imports it but only uses
+    # it inside functions the tests never call, while detection/tests.py builds
+    # a real PNG with Image.new().save() — a stub there produces an empty buffer
+    # and the test fails for a reason that has nothing to do with the view.
+    # Pillow is small and is listed in tests/requirements.txt.
 
     sys.modules["transformers"] = _module("transformers", AutoModel=_Inert("AutoModel"))
     sys.modules["huggingface_hub"] = _module(
@@ -97,9 +103,29 @@ def install():
     )
 
     # cv2 needs real-ish behaviour: views.py calls imdecode and branches on a
-    # None result to produce its 400. The default here decodes successfully;
-    # tests that want the invalid-image path patch detection.views.cv2.imdecode.
+    # None result to produce its 400.
+    #
+    # The stub therefore reproduces the one property the view depends on —
+    # "decodes an image, returns None for anything else" — by looking at the
+    # magic bytes. A stub that decoded everything would make the Invalid image
+    # branch untestable without patching, and a stub that decoded nothing would
+    # make the success path untestable. Tests can still patch
+    # detection.views.cv2.imdecode to force either outcome.
     import numpy as np
+
+    def imdecode(buf, flags):
+        data = bytes(buf)
+        magic = (
+            b"\xff\xd8\xff",       # JPEG
+            b"\x89PNG\r\n\x1a\n",  # PNG
+            b"GIF87a", b"GIF89a",  # GIF
+            b"BM",                 # BMP
+            b"RIFF",               # WebP container
+            b"II*\x00", b"MM\x00*",  # TIFF
+        )
+        if not data or not any(data.startswith(m) for m in magic):
+            return None
+        return np.zeros((64, 64, 3), dtype=np.uint8)
 
     sys.modules["cv2"] = _module(
         "cv2",
@@ -109,9 +135,7 @@ def install():
         #   cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_...xml')
         # so this one has to be a real string rather than an _Inert.
         data=_module("cv2.data", haarcascades="/stub/haarcascades/"),
-        imdecode=lambda buf, flags: (
-            None if len(buf) == 0 else np.zeros((64, 64, 3), dtype=np.uint8)
-        ),
+        imdecode=imdecode,
         cvtColor=lambda img, code: img,
         resize=lambda img, size, **k: np.zeros((size[1], size[0], 3), dtype=np.uint8),
         COLOR_BGR2RGB=4,
