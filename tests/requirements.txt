@@ -1,0 +1,9 @@
+# Deliberately does NOT include torch, torchvision, transformers or opencv:
+# tests/stubs.py replaces the inference stack, so the contract layer runs
+# without a 3 GB dependency tree or a model download.
+pytest>=7.4
+pytest-django>=4.7
+requests>=2.31
+Django>=5.2
+djangorestframework>=3.16
+numpy>=1.26
