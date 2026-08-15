@@ -54,14 +54,20 @@ jobs:
       # "The version '3.10' with architecture 'x64' was not found for
       # Linuxmint 22.2". A container pins the interpreter without depending on
       # what the workstation happens to have.
+      # The container runs as root against a mounted workspace, so anything it
+      # writes there lands root-owned and the NEXT run fails in actions/checkout,
+      # which cannot clean it. Both caches are therefore suppressed rather than
+      # cleaned up afterwards: __pycache__ via PYTHONDONTWRITEBYTECODE and
+      # .pytest_cache via -p no:cacheprovider.
       - name: Run the suite
         run: |
           docker run --rm \
             -v "$PWD":/w -w /w \
             -e FACE_EMBED_SECRET_KEY=ci-secret \
             -e FACE_EMBED_ALLOWED_HOSTS=localhost,127.0.0.1,testserver \
+            -e PYTHONDONTWRITEBYTECODE=1 \
             python:3.10-slim \
-            sh -c 'python -m pip install -q --upgrade pip && pip install -q -r tests/requirements.txt && pytest -q'
+            sh -c 'python -m pip install -q --upgrade pip && pip install -q -r tests/requirements.txt && pytest -q -p no:cacheprovider'
 
   prepare:
     name: Resolve deploy target
